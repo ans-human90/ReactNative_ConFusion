@@ -8,7 +8,7 @@ import {
   StyleSheet,
   Button,
   Alert,
-  PanResponde,
+  PanResponder,
 } from "react-native";
 import { Card, Icon, Input } from "react-native-elements";
 import { connect } from "react-redux";
