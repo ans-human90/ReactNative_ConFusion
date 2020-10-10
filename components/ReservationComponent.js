@@ -2,23 +2,21 @@ import React, { Component } from "react";
 import {
   Text,
   View,
+  ScrollView,
   StyleSheet,
   Picker,
   Switch,
   Button,
   Modal,
   Alert,
-  ScrollView,
 } from "react-native";
-import { Card } from "react-native-elements";
+import { Permissions, Notifications, Calendar } from "expo";
 import DatePicker from "react-native-datepicker";
 import * as Animatable from "react-native-animatable";
-import { Permissions, Notifications } from "expo";
 
 class Reservation extends Component {
   constructor(props) {
     super(props);
-
     this.state = {
       guests: 1,
       smoking: false,
@@ -35,33 +33,58 @@ class Reservation extends Component {
     this.setState({ showModal: !this.state.showModal });
   }
 
-  handleReservation = () => {
+  async obtainCalendarPermission() {
+    let permission = await Permissions.getAsync(Permissions.CALENDAR);
+    if (permission.status !== "granted") {
+      permission = await Permissions.askAsync(Permissions.CALENDAR);
+      if (permission.status !== "granted") {
+        Alert.alert("Permission not granted to calendar");
+      }
+    }
+    return permission;
+  }
+
+  async addReservationToCalendar(date) {
+    await this.obtainCalendarPermission();
+
+    let dateMs = Date.parse(date);
+    let startDate = new Date(dateMs);
+    let endDate = new Date(dateMs + 2 * 60 * 60 * 1000);
+
+    await Calendar.createEventAsync(Calendar.DEFAULT, {
+      title: "Con Fusion Table Reservation",
+      startDate: startDate,
+      endDate: endDate,
+      timeZone: "Asia/Hong_Kong",
+      location:
+        "121, Clear Water Bay Road, Clear Water Bay, Kowloon, Hong Kong",
+    });
+  }
+
+  handleReservation() {
     console.log(JSON.stringify(this.state));
     Alert.alert(
       "Your Reservation OK?",
       "Number of Guests: " +
         this.state.guests +
         "\nSmoking? " +
-        (this.state.smoking ? "YES" : "NO") +
+        this.state.smoking +
         "\nDate and Time: " +
         this.state.date,
       [
-        {
-          text: "Cancel",
-          onPress: () => this.resetForm(),
-          style: "cancel",
-        },
+        { text: "Cancel", onPress: () => this.resetForm(), style: "cancel" },
         {
           text: "OK",
           onPress: () => {
             this.presentLocalNotification(this.state.date);
+            this.addReservationToCalendar(this.state.date);
             this.resetForm();
           },
         },
       ],
       { cancelable: false }
     );
-  };
+  }
 
   resetForm() {
     this.setState({
@@ -106,7 +129,7 @@ class Reservation extends Component {
   render() {
     return (
       <ScrollView>
-        <Animatable.View animation="zoomIn" duration={2000} delay={1000}>
+        <Animatable.View animation="zoomInDown" duration={2000} delay={1000}>
           <View style={styles.formRow}>
             <Text style={styles.formLabel}>Number of Guests</Text>
             <Picker
@@ -140,7 +163,7 @@ class Reservation extends Component {
               date={this.state.date}
               format=""
               mode="datetime"
-              placeholder="select date and Time"
+              placeholder="select date and time"
               minDate="2017-01-01"
               confirmBtnText="Confirm"
               cancelBtnText="Cancel"
@@ -154,7 +177,6 @@ class Reservation extends Component {
                 dateInput: {
                   marginLeft: 36,
                 },
-                // ... You can check the source to find the other keys.
               }}
               onDateChange={(date) => {
                 this.setState({ date: date });
@@ -170,20 +192,14 @@ class Reservation extends Component {
             />
           </View>
           <Modal
-            animationType={"slide"}
+            animation={"slide"}
             transparent={false}
             visible={this.state.showModal}
-            onDismiss={() => {
-              this.toggleModal();
-              this.resetForm();
-            }}
-            onRequestClose={() => {
-              this.toggleModal();
-              this.resetForm();
-            }}
+            onDismiss={() => this.toggleModal()}
+            onRequestClose={() => this.toggleModal}
           >
             <View style={styles.modal}>
-              <Text style={styles.modalTitle}>Your Reservation</Text>
+              <Text style={styles.modalTitle}> Your Reservation</Text>
               <Text style={styles.modalText}>
                 Number of Guests: {this.state.guests}
               </Text>
@@ -199,7 +215,7 @@ class Reservation extends Component {
                   this.resetForm();
                 }}
                 color="#512DA8"
-                title="Close"
+                title="close"
               />
             </View>
           </Modal>
@@ -215,7 +231,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flex: 1,
     flexDirection: "row",
-    margin: 20,
+    margin: 28,
   },
   formLabel: {
     fontSize: 18,
